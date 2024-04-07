@@ -5,7 +5,7 @@ use std::fmt::{Display, Formatter};
 #[async_trait::async_trait]
 pub trait TokenCache: Sync {
     /// Returns the token that is currently held within the instance of `TokenCache`, together with
-    /// the expiry of that token as a u64 in seconds sine the Unix Epoch (1 Jan 1970).
+    /// the expiry of that token as a u64 in seconds since the Unix Epoch (1 Jan 1970).
     async fn token_and_exp(&self) -> Option<(String, u64)>;
 
     /// Updates the token to the value `token`.
@@ -46,10 +46,7 @@ struct Claims {
 
 /// This struct contains a token, an expiry, and an access scope.
 pub struct Token {
-    // this field contains the JWT and the expiry thereof. They are in the same Option because if
-    // one of them is `Some`, we require that the other be `Some` as well.
     token: tokio::sync::RwLock<Option<DefaultTokenData>>,
-    // store the access scope for later use if we need to refresh the token
     access_scope: String,
 }
 
@@ -96,7 +93,10 @@ impl TokenCache for Token {
         let authentication_manager = AuthenticationManager::new().await.unwrap();
         let scopes = &[self.access_scope.as_str()];
         let token = authentication_manager.get_token(scopes).await.unwrap();
-        Ok((token.as_str().to_string(), token.expires_at().unwrap().unix_timestamp() as u64))
+        Ok((
+            token.as_str().to_string(),
+            token.expires_at().unix_timestamp() as u64,
+        ))
     }
 }
 
